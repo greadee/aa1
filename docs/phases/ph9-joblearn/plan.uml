@@ -1,0 +1,107 @@
+@startuml
+' Phase 9 — Job Learning: planned infrastructure. Authored at phase start.
+' Copy to summary.uml at phase end and edit to the as-built state.
+
+title Phase 9 — Job Learning (planned)
+
+skinparam componentStyle rectangle
+
+package "aa-kernel (Go; imports contracts + obsv + memory + toolbox)" as kernel {
+  component "telemetry (bounded evidence + deterministic candidates)" as telemetry
+  component "orchestrator / gate (cycle + gate outcomes)" as cycle
+  component "registry (roles, trades, workers)" as registry
+  component "joblearn (types + errors + clock)" as core
+  component "joblearn.attribution (attribute + versioned scoring)" as attribution
+  component "joblearn.candidates (patterns, pitfalls, strategies, hints)" as candidates
+  component "joblearn.similarity (feature clusters + conflict)" as similarity
+  component "joblearn.gate (capability registry + evidence gates)" as gate
+  component "joblearn.backtest (baseline comparison + budget)" as backtest
+  component "joblearn.route (hint + deterministic fallback)" as route
+  component "joblearn.promote (Sink -> memory candidates)" as promote
+}
+
+package "aa-memory (canonical store + promotion)" as memory {
+  component "repo (lifecycle transitions; typed memory-record repository)" as repo
+}
+
+package "aa-contracts (memory_record, strategy, telemetry, route v1)" as contracts
+package "aa-obsv (scaffolded; observation evidence deferred)" as obsv
+package "aa-sifter (deterministic recommender baseline; RPC deferred)" as sifter
+package "aa-console (reports surface, later)" as console
+
+contracts --> core
+telemetry --> attribution
+cycle --> attribution
+registry --> attribution
+attribution --> candidates
+candidates --> similarity
+attribution --> similarity
+candidates --> gate
+similarity --> gate
+attribution --> backtest
+gate --> backtest
+backtest --> route
+gate --> route
+candidates --> promote
+gate --> promote
+promote --> repo : CANDIDATE records (Sink)
+repo --> repo : Transition (VALIDATED/ACTIVE)
+obsv ..> attribution : observation evidence (deferred)
+sifter ..> backtest : deterministic baseline (fake now; RPC later)
+console ..> backtest : evaluation reports (later)
+
+note right of telemetry
+  ADR-P9-002: attribution and
+  scoring consume bounded evidence
+  (telemetry, gate outcomes, history)
+  and are deterministic; no model is
+  called anywhere in the loop.
+end note
+
+note bottom of candidates
+  ADR-P9-008: every candidate carries
+  provenance, a level, and
+  applicability. ADR-P9-001: the
+  kernel proposes; memory owns
+  canonical state and promotion.
+end note
+
+note bottom of similarity
+  ADR-P9-003: similarity is
+  feature-based and deterministic
+  (no embeddings); conflicts are
+  detected per scope, independent of
+  input order.
+end note
+
+note bottom of gate
+  ADR-P9-004/005: capabilities are
+  disabled by default. Enablement
+  requires enough attributed outcomes
+  and a backtest win over the
+  deterministic baseline.
+end note
+
+note bottom of backtest
+  ADR-P9-005: a candidate policy is
+  compared to a baseline over a
+  bounded dataset; the report is
+  deterministic and budgeted.
+end note
+
+note bottom of route
+  ADR-P9-006/007: the learned signal
+  is a hint only; a deterministic
+  fallback is always returned, and a
+  human gate or execution contract is
+  never bypassed.
+end note
+
+note bottom of repo
+  ADR-P9-001/009: candidates persist
+  as CANDIDATE via the shared
+  promotion transitions; promotion
+  stays explicit and evidence-gated.
+end note
+
+@enduml
